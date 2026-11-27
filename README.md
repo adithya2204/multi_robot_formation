@@ -23,6 +23,8 @@ flowchart LR
 
 Each node is a goal planner, not a low-level controller. Path planning and obstacle avoidance are handled by each robot's own `move_base`. All goals are `PoseStamped` messages in the `map` frame with zero yaw.
 
+![Triangle, square and pentagon layouts around the clicked centre, with each robot's motion after arrival](images/formations.png)
+
 | Script | Robots | Shape around the clicked centre | After arrival |
 |---|---|---|---|
 | `triangle_formation.py` | `tb3_0` to `tb3_2` | Vertices at 0°, 120° and 240° on a 0.30 m radius (side ≈ 0.52 m) | One-shot: goals are sent once per click |
@@ -105,6 +107,7 @@ multi_robot_formation/
 │   ├── triangle_formation.py
 │   ├── square_formation.py
 │   └── pentagon_formation.py
+├── images/formations.png        # figure for this README
 ├── CMakeLists.txt
 └── package.xml
 ```

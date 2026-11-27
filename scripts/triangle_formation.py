@@ -43,5 +43,6 @@ class TriangleFormationNode:
 
 if __name__ == '__main__':
     rospy.init_node('triangle_formation_node')
-    TriangleFormationNode(radius=0.3)
+    # Override from the command line, e.g. _radius:=0.4
+    TriangleFormationNode(radius=rospy.get_param('~radius', 0.3))
     rospy.spin()

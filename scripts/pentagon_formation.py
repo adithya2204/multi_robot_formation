@@ -110,5 +110,7 @@ class PentagonFormationNode:
 
 if __name__ == '__main__':
     rospy.init_node('pentagon_formation_node')
-    node = PentagonFormationNode(side=0.3)
+    # Override from the command line, e.g. _side:=0.4 _tolerance:=0.2
+    node = PentagonFormationNode(side=rospy.get_param('~side', 0.3),
+                                 tolerance=rospy.get_param('~tolerance', 0.15))
     node.spin()

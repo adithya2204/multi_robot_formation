@@ -99,6 +99,9 @@ class SquareFormationNode:
 
 if __name__ == '__main__':
     rospy.init_node('square_formation_node')
-    node = SquareFormationNode(side=0.71, tolerance=0.15, wait_time=30.0)
+    # Override from the command line, e.g. _side:=0.5 _wait_time:=10.0
+    node = SquareFormationNode(side=rospy.get_param('~side', 0.71),
+                               tolerance=rospy.get_param('~tolerance', 0.15),
+                               wait_time=rospy.get_param('~wait_time', 30.0))
     node.setup()
     node.spin()

@@ -18,7 +18,7 @@ This was run on real TurtleBot3 robots, with up to five at once, on top of [turt
 flowchart LR
     rviz["RViz 2D Nav Goal<br/>(formation centre)"] -->|"/&lt;shape&gt;_center_goal"| node["&lt;shape&gt;_formation.py"]
     node -->|"/tb3_i/move_base_simple/goal"| mb["move_base on each robot"]
-    pose["/tb3_i/amcl_pose (square)<br/>/tb3_i/odom (pentagon)"] --> node
+    pose["/tb3_i/amcl_pose<br/>(square, pentagon)"] --> node
 ```
 
 Each node is a goal planner, not a low-level controller. Path planning and obstacle avoidance are handled by each robot's own `move_base`. All goals are `PoseStamped` messages in the `map` frame with zero yaw.
@@ -26,8 +26,8 @@ Each node is a goal planner, not a low-level controller. Path planning and obsta
 | Script | Robots | Shape around the clicked centre | After arrival |
 |---|---|---|---|
 | `triangle_formation.py` | `tb3_0` to `tb3_2` | Vertices at 0°, 120° and 240° on a 0.30 m radius (side ≈ 0.52 m) | One-shot: goals are sent once per click |
-| `square_formation.py` | `tb3_0` to `tb3_3` | Corners at (±0.354, ±0.354) m, i.e. 0.50 m from the centre (side ≈ 0.71 m) | Waits until all four are within 0.15 m (from `amcl_pose`), holds 30 s, then moves every robot to the next corner counter-clockwise. This repeats indefinitely. |
-| `pentagon_formation.py` | `tb3_0` to `tb3_4` | Vertices every 72° on a 0.255 m radius (0.30 m side) | Waits until all five are within 0.08 m (from `odom`), pauses 1 s, then makes one neighbour swap (robot *i* goes to vertex *i*+1) |
+| `square_formation.py` | `tb3_0` to `tb3_3` | Square with a 0.71 m side, corners at (±0.355, ±0.355) m | Waits until all four are within 0.15 m (from `amcl_pose`), holds 30 s, then moves every robot to the next corner counter-clockwise. This repeats indefinitely. |
+| `pentagon_formation.py` | `tb3_0` to `tb3_4` | Vertices every 72° on a 0.255 m radius (0.30 m side) | Waits until all five are within 0.15 m (from `amcl_pose`), pauses 1 s, then makes one neighbour swap (robot *i* goes to vertex *i*+1) |
 
 A new click on the centre topic recomputes the shape and starts the cycle again.
 
@@ -71,17 +71,31 @@ source devel/setup.bash
      '{header: {frame_id: map}, pose: {position: {x: 1.0, y: 0.5}, orientation: {w: 1.0}}}'
    ```
 
-Formation sizes are set where each node is constructed, at the bottom of each script (`radius=0.3`, `side=0.5, tolerance=0.15, wait_time=30.0`, `side=0.3`).
+### Parameters
+
+Each node reads private ROS parameters. The defaults are the values used in testing.
+
+| Node | Parameter | Default | Meaning |
+|---|---|---|---|
+| `triangle_formation.py` | `~radius` | 0.3 | centre-to-vertex distance (m) |
+| `square_formation.py` | `~side` | 0.71 | side length (m) |
+| | `~tolerance` | 0.15 | arrival distance (m) |
+| | `~wait_time` | 30.0 | hold time before rotating (s) |
+| `pentagon_formation.py` | `~side` | 0.3 | side length (m) |
+| | `~tolerance` | 0.15 | arrival distance (m) |
+
+```bash
+rosrun multi_robot_formation square_formation.py _side:=0.5 _wait_time:=10.0
+```
+
+Keep the tolerances at or above `move_base`'s goal tolerance (0.15 m in the navigation package). `move_base` can stop anywhere inside that radius, so a tighter check may never pass.
 
 ---
 
-## Known issues
+## Known limitations
 
-These are left as they were when the robots were tested.
-
-- **The pentagon node checks arrival in the wrong frame.** It reads `/tb3_i/odom` but compares those positions with goals in the `map` frame. Unless a robot's `odom` frame happens to line up with `map`, the arrival check won't pass and the neighbour swap won't fire. The square node reads `amcl_pose`, which is in `map`.
-- **The square's `side` argument is really the centre-to-corner distance.** The corners are placed at (±r, ±r) with r = side/√2, so the actual side is √2 × `side`. Also, the code comment says "clockwise", but the corner order is counter-clockwise in `map`.
 - **Robot names are hard-coded** (`tb3_0` to `tb3_4`).
+- **The pentagon has not been re-run on hardware since its fixes.** It now checks arrival against `amcl_pose` within 0.15 m. The lab runs used the earlier code.
 
 ## Repository layout
 

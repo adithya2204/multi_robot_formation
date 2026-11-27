@@ -5,9 +5,12 @@ from geometry_msgs.msg import PoseStamped
 from geometry_msgs.msg import PoseWithCovarianceStamped
 
 class SquareFormationNode:
-    def __init__(self, side=0.5, tolerance=0.15, wait_time=30.0):
+    def __init__(self, side=0.71, tolerance=0.15, wait_time=30.0):
+        # side: true side length of the square (m). The default 0.71 m is the
+        # size the formation was tested at (the old code placed corners at
+        # +/-0.354 m while calling the value side=0.5).
         self.side = side
-        self.radius = side / math.sqrt(2)
+        self.half_side = side / 2.0
         self.tolerance = tolerance
         self.wait_time = wait_time
 
@@ -36,13 +39,13 @@ class SquareFormationNode:
 
     def center_goal_cb(self, msg):
         x_c, y_c = msg.pose.position.x, msg.pose.position.y
-        r = self.radius
-        # Corner order: 0→1→2→3 (clockwise)
+        h = self.half_side
+        # Corner order 0->1->2->3 runs counter-clockwise in the map frame
         self.square_points = [
-            (x_c + r, y_c + r),
-            (x_c - r, y_c + r),
-            (x_c - r, y_c - r),
-            (x_c + r, y_c - r)
+            (x_c + h, y_c + h),
+            (x_c - h, y_c + h),
+            (x_c - h, y_c - h),
+            (x_c + h, y_c - h)
         ]
         self.active_targets = list(self.square_points)
         self.goals_sent = True
@@ -74,7 +77,7 @@ class SquareFormationNode:
         return True
 
     def rotate_targets(self):
-        # Rotate vertices so each robot moves clockwise to the next one
+        # Each robot moves to the next corner (counter-clockwise in the map frame)
         self.active_targets = self.active_targets[1:] + [self.active_targets[0]]
 
     def spin(self):
@@ -96,6 +99,9 @@ class SquareFormationNode:
 
 if __name__ == '__main__':
     rospy.init_node('square_formation_node')
-    node = SquareFormationNode(side=0.5, tolerance=0.15, wait_time=30.0)
+    # Override from the command line, e.g. _side:=0.5 _wait_time:=10.0
+    node = SquareFormationNode(side=rospy.get_param('~side', 0.71),
+                               tolerance=rospy.get_param('~tolerance', 0.15),
+                               wait_time=rospy.get_param('~wait_time', 30.0))
     node.setup()
     node.spin()

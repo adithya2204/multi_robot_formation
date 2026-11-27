@@ -2,10 +2,10 @@
 import math
 import rospy
 from geometry_msgs.msg import PoseStamped
-from nav_msgs.msg import Odometry
+from geometry_msgs.msg import PoseWithCovarianceStamped
 
 class PentagonFormationNode:
-    def __init__(self, side=0.3, tolerance=0.08):
+    def __init__(self, side=0.3, tolerance=0.15):
         self.n = 5
         self.side = side
         # Compute radius for regular pentagon
@@ -15,22 +15,25 @@ class PentagonFormationNode:
         self.robot_names = ['tb3_0', 'tb3_1', 'tb3_2', 'tb3_3', 'tb3_4']
         self.goal_pubs = [rospy.Publisher(f'/{name}/move_base_simple/goal', PoseStamped, queue_size=1)
                           for name in self.robot_names]
-        self.odom_subs = []
+        self.pose_subs = []
         self.current_positions = [None] * self.n
         self.goals_sent = False
         self.swap_sent = False
         self.pentagon_points = []
         self.arrived = [False] * self.n
 
+        # Arrival is checked against the goals, which are in the map frame,
+        # so read each robot's AMCL pose (map frame), not its odometry.
         for i, name in enumerate(self.robot_names):
-            sub = rospy.Subscriber(f'/{name}/odom', Odometry, self._odom_callback_factory(i))
-            self.odom_subs.append(sub)
+            sub = rospy.Subscriber(f'/{name}/amcl_pose', PoseWithCovarianceStamped,
+                                   self._pose_callback_factory(i))
+            self.pose_subs.append(sub)
 
         rospy.Subscriber('/pentagon_center_goal', PoseStamped, self.center_goal_cb)
 
         rospy.loginfo('Pentagon formation node initialized for 5 robots.')
 
-    def _odom_callback_factory(self, idx):
+    def _pose_callback_factory(self, idx):
         def callback(msg):
             self.current_positions[idx] = msg
         return callback
@@ -107,5 +110,7 @@ class PentagonFormationNode:
 
 if __name__ == '__main__':
     rospy.init_node('pentagon_formation_node')
-    node = PentagonFormationNode(side=0.3)
+    # Override from the command line, e.g. _side:=0.4 _tolerance:=0.2
+    node = PentagonFormationNode(side=rospy.get_param('~side', 0.3),
+                                 tolerance=rospy.get_param('~tolerance', 0.15))
     node.spin()
